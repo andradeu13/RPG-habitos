@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mi Vida RPG">
+<title>Mi Vida RPG</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0a0f;
+  --bg2: #12121a;
+  --bg3: #1a1a26;
+  --border: #2a2a40;
+  --purple: #7c5cbf;
+  --purple-light: #a87fff;
+  --gold: #f0b429;
+  --gold-dark: #a07010;
+  --green: #2ecc71;
+  --red: #e74c3c;
+  --red-dark: #c0392b;
+  --cyan: #00e5ff;
+  --text: #e8e8f0;
+  --text2: #8888aa;
+  --pixel: 'Press Start 2P', monospace;
+  --mono: 'Share Tech Mono', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { background: var(--bg); color: var(--text); font-family: var(--mono); min-height: 100vh; overflow-x: hidden; }
+
+/* Scanlines overlay */
+body::before {
+  content: '';
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+  pointer-events: none; z-index: 9999;
+}
+
+/* Header */
+.header {
+  background: var(--bg2);
+  border-bottom: 2px solid var(--purple);
+  padding: 12px 16px 8px;
+  position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center; gap: 10px;
+}
+.header-logo { font-family: var(--pixel); font-size: 9px; color: var(--purple-light); line-height: 1.6; }
+.header-logo span { color: var(--gold); display: block; font-size: 7px; margin-top: 2px; }
+.header-baro {
+  margin-left: auto;
+  background: var(--bg3); border: 1px solid var(--gold-dark);
+  border-radius: 4px; padding: 4px 10px;
+  font-family: var(--pixel); font-size: 8px; color: var(--gold);
+  display: flex; align-items: center; gap: 6px;
+}
+
+/* Tabs */
+.tabs {
+  display: flex; background: var(--bg2);
+  border-bottom: 2px solid var(--border);
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar { display: none; }
+.tab {
+  flex: 1; min-width: 70px;
+  padding: 10px 4px; text-align: center;
+  font-family: var(--pixel); font-size: 7px; color: var(--text2);
+  cursor: pointer; border-bottom: 2px solid transparent;
+  transition: all .2s; white-space: nowrap;
+}
+.tab.active { color: var(--purple-light); border-bottom-color: var(--purple-light); }
+
+/* Screens */
+.screen { display: none; padding: 12px; padding-bottom: 30px; }
+.screen.active { display: block; }
+
+/* Profile card */
+.profile-card {
+  background: var(--bg2); border: 1px solid var(--purple);
+  border-radius: 6px; padding: 16px; margin-bottom: 12px;
+  position: relative; overflow: hidden;
+}
+.profile-card::before {
+  content: '';
+  position: absolute; top: 0; right: 0;
+  width: 80px; height: 80px;
+  background: radial-gradient(circle, rgba(124,92,191,0.15) 0%, transparent 70%);
+}
+.char-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.char-avatar {
+  width: 56px; height: 56px; border-radius: 4px;
+  background: var(--bg3); border: 2px solid var(--purple);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; flex-shrink: 0;
+}
+.char-name { font-family: var(--pixel); font-size: 10px; color: var(--text); margin-bottom: 4px; }
+.char-title { font-size: 11px; color: var(--purple-light); margin-bottom: 2px; }
+.char-status { font-size: 11px; }
+.status-alive { color: var(--green); }
+.status-dead { color: var(--red); animation: blink 1s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+/* XP bar global */
+.xp-section { margin-bottom: 10px; }
+.xp-header { display: flex; justify-content: space-between; font-size: 10px; color: var(--text2); margin-bottom: 5px; }
+.xp-header strong { color: var(--gold); font-family: var(--pixel); font-size: 8px; }
+.xp-track {
+  height: 12px; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 2px; overflow: hidden; position: relative;
+}
+.xp-fill {
+  height: 100%; background: linear-gradient(90deg, var(--purple), var(--purple-light));
+  border-radius: 2px; transition: width .5s cubic-bezier(.4,0,.2,1);
+  position: relative;
+}
+.xp-fill::after {
+  content: '';
+  position: absolute; top: 0; right: 0; width: 4px; height: 100%;
+  background: white; opacity: .4; animation: shimmer 1.5s infinite;
+}
+@keyframes shimmer { 0%,100%{opacity:.2} 50%{opacity:.6} }
+
+/* Stats table */
+.section-label {
+  font-family: var(--pixel); font-size: 7px; color: var(--text2);
+  letter-spacing: .1em; margin-bottom: 10px;
+  display: flex; align-items: center; gap: 8px;
+}
+.section-label::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+.stats-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 6px; overflow: hidden; margin-bottom: 12px;
+}
+.stat-row {
+  padding: 10px 12px; border-bottom: 1px solid var(--border);
+  display: grid; grid-template-columns: 1fr auto;
+  gap: 8px; align-items: center;
+}
+.stat-row:last-child { border-bottom: none; }
+.stat-top { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.stat-icon { font-size: 16px; }
+.stat-name { font-size: 13px; font-weight: bold; }
+.stat-lv { font-family: var(--pixel); font-size: 8px; color: var(--gold); background: var(--bg3); padding: 2px 6px; border-radius: 2px; }
+.stat-nums { display: flex; gap: 10px; font-size: 11px; color: var(--text2); }
+.stat-nums span { display: flex; align-items: center; gap: 3px; }
+.stat-hp-bar { width: 70px; height: 6px; background: var(--bg3); border-radius: 2px; overflow: hidden; }
+.stat-hp-fill { height: 100%; border-radius: 2px; transition: width .4s; }
+.prog-squares {
+  display: flex; gap: 2px; margin-top: 5px; flex-wrap: wrap;
+}
+.sq {
+  width: 13px; height: 13px; border-radius: 2px;
+  background: var(--bg3); border: 1px solid var(--border);
+  transition: all .2s;
+}
+.sq.on { background: var(--purple); border-color: var(--purple-light); }
+
+/* Habits */
+.habit-item {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 6px; margin-bottom: 8px;
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px; cursor: pointer;
+  transition: all .15s; -webkit-user-select: none;
+}
+.habit-item:active { transform: scale(.98); }
+.habit-item.done-pos {
+  background: rgba(46,204,113,.08);
+  border-color: rgba(46,204,113,.4);
+}
+.habit-item.done-neg {
+  background: rgba(231,76,60,.08);
+  border-color: rgba(231,76,60,.4);
+}
+.cb {
+  width: 22px; height: 22px; flex-shrink: 0;
+  border-radius: 3px; border: 2px solid var(--border);
+  background: var(--bg3); display: flex;
+  align-items: center; justify-content: center;
+  transition: all .2s;
+}
+.cb.on-pos { background: var(--green); border-color: var(--green); }
+.cb.on-neg { background: var(--red); border-color: var(--red); }
+.cb-check { opacity: 0; font-size: 12px; transition: opacity .15s; }
+.cb.on-pos .cb-check, .cb.on-neg .cb-check { opacity: 1; }
+.habit-body { flex: 1; }
+.habit-name { font-size: 13px; font-weight: bold; margin-bottom: 4px; }
+.habit-tags { display: flex; gap: 4px; flex-wrap: wrap; }
+.tag {
+  font-size: 10px; padding: 2px 5px; border-radius: 3px;
+  font-family: var(--mono);
+}
+.tag-xp { background: rgba(124,92,191,.2); color: var(--purple-light); }
+.tag-xp-neg { background: rgba(231,76,60,.15); color: #ff8888; }
+.tag-hp { background: rgba(46,204,113,.15); color: #88ffaa; }
+.tag-hp-neg { background: rgba(231,76,60,.15); color: #ff8888; }
+.tag-baro { background: rgba(240,180,41,.15); color: var(--gold); }
+.tag-area { background: var(--bg3); color: var(--text2); }
+.habit-group {
+  font-family: var(--pixel); font-size: 7px;
+  padding: 6px 0 8px; margin-top: 4px;
+}
+.habit-group.pos { color: var(--green); }
+.habit-group.neg { color: var(--red); }
+
+/* Shop */
+.shop-item {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 6px; padding: 12px; margin-bottom: 8px;
+  display: flex; align-items: center; gap: 10px;
+}
+.shop-emoji { font-size: 24px; flex-shrink: 0; width: 36px; text-align: center; }
+.shop-body { flex: 1; }
+.shop-name { font-size: 13px; font-weight: bold; margin-bottom: 3px; }
+.shop-meta { font-size: 11px; color: var(--text2); }
+.shop-price { color: var(--gold); font-weight: bold; }
+.shop-effect-pos { color: var(--green); }
+.shop-effect-neg { color: var(--red); }
+.buy-btn {
+  padding: 8px 12px; border-radius: 4px; font-family: var(--pixel);
+  font-size: 8px; cursor: pointer; border: 1px solid;
+  transition: all .15s; white-space: nowrap; flex-shrink: 0;
+}
+.buy-btn:active { transform: scale(.95); }
+.buy-btn-ready { background: rgba(240,180,41,.1); border-color: var(--gold); color: var(--gold); }
+.buy-btn-cant { background: var(--bg3); border-color: var(--border); color: var(--text2); cursor: not-allowed; }
+.buy-btn-done { background: rgba(46,204,113,.1); border-color: var(--green); color: var(--green); cursor: default; }
+
+/* Daily summary cards */
+.day-cards { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.day-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 6px; padding: 10px 8px; text-align: center;
+}
+.day-card-label { font-size: 9px; color: var(--text2); margin-bottom: 5px; }
+.day-card-val { font-family: var(--pixel); font-size: 11px; }
+.val-xp { color: var(--purple-light); }
+.val-baro { color: var(--gold); }
+.val-hp-pos { color: var(--green); }
+.val-hp-neg { color: var(--red); }
+
+/* YOU DIED banner */
+.died-banner {
+  background: rgba(231,76,60,.1); border: 2px solid var(--red);
+  border-radius: 6px; padding: 14px; margin-bottom: 12px;
+  text-align: center; display: none;
+}
+.died-title { font-family: var(--pixel); font-size: 14px; color: var(--red); margin-bottom: 8px; animation: blink 1s infinite; }
+.died-text { font-size: 12px; color: var(--text2); }
+
+/* Level up flash */
+.levelup-flash {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(124,92,191,.15); pointer-events: none;
+  opacity: 0; z-index: 9998;
+  transition: opacity .3s;
+}
+.levelup-flash.show { opacity: 1; }
+
+/* Toast */
+.toast {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: var(--bg3); border: 1px solid var(--purple);
+  border-radius: 6px; padding: 10px 18px;
+  font-family: var(--pixel); font-size: 8px; color: var(--purple-light);
+  white-space: nowrap; z-index: 10000;
+  opacity: 0; transition: all .3s;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* Reset button */
+.reset-area {
+  background: var(--bg2); border: 1px solid var(--red-dark);
+  border-radius: 6px; padding: 14px; margin-bottom: 12px;
+}
+.reset-btn {
+  width: 100%; padding: 12px; border-radius: 4px;
+  background: rgba(231,76,60,.1); border: 1px solid var(--red-dark);
+  color: var(--red); font-family: var(--pixel); font-size: 8px;
+  cursor: pointer; margin-top: 8px; transition: all .2s;
+}
+.reset-btn:active { background: rgba(231,76,60,.25); }
+
+/* Titles table */
+.titles-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.titles-table th { font-family: var(--pixel); font-size: 7px; color: var(--text2); padding: 6px 8px; text-align: left; border-bottom: 1px solid var(--border); }
+.titles-table td { padding: 8px; border-bottom: 1px solid var(--border); }
+.titles-table tr:last-child td { border-bottom: none; }
+.titles-table tr.current-lv td { background: rgba(124,92,191,.1); color: var(--purple-light); }
+
+/* Info card */
+.info-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 6px; padding: 14px; margin-bottom: 10px; font-size: 12px; line-height: 1.7; color: var(--text2);
+}
+.info-card strong { color: var(--text); }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div class="levelup-flash" id="lvFlash"></div>
+<div class="toast" id="toast"></div>
+
+<div class="header">
+  <div class="char-avatar" id="hdr-avatar" style="width:36px;height:36px;font-size:18px;border:1px solid var(--purple)">🎮</div>
+  <div class="header-logo">MI VIDA RPG <span id="hdr-level">NIV. 1 — INICIADO</span></div>
+  <div class="header-baro">💰 <span id="hdr-baro">0</span></div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('perfil')">👤 PERFIL</div>
+  <div class="tab" onclick="switchTab('habitos')">✅ HABITOS</div>
+  <div class="tab" onclick="switchTab('tienda')">🛒 TIENDA</div>
+  <div class="tab" onclick="switchTab('info')">📖 INFO</div>
+</div>
+
+<!-- PERFIL -->
+<div class="screen active" id="screen-perfil">
+  <div class="died-banner" id="died-banner">
+    <div class="died-title">☠ YOU DIED ☠</div>
+    <div class="died-text">Castigo: Recorrer 50 km en menos de 24 horas antes de continuar.</div>
+  </div>
+
+  <div class="profile-card">
+    <div class="char-row">
+      <div class="char-avatar" id="avatar">🐣</div>
+      <div>
+        <div class="char-name" id="char-name">MI PERSONAJE</div>
+        <div class="char-title" id="char-title">Nivel 1 — Iniciado</div>
+        <div class="char-status status-alive" id="char-status">▶ Vivo y en pie</div>
+      </div>
+    </div>
+    <div class="xp-section">
+      <div class="xp-header">
+        <span>XP GLOBAL</span>
+        <strong id="xp-label">0 / 100 XP (0%)</strong>
+      </div>
+      <div class="xp-track">
+        <div class="xp-fill" id="xp-fill" style="width:0%"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="day-cards">
+    <div class="day-card"><div class="day-card-label">XP HOY</div><div class="day-card-val val-xp" id="day-xp">+0</div></div>
+    <div class="day-card"><div class="day-card-label">BAROS HOY</div><div class="day-card-val val-baro" id="day-baro">+0</div></div>
+    <div class="day-card"><div class="day-card-label">HP NETO</div><div class="day-card-val" id="day-hp">+0</div></div>
+  </div>
+
+  <div class="section-label">STATS POR AREA</div>
+  <div class="stats-card" id="stats-list"></div>
+</div>
+
+<!-- HABITOS -->
+<div class="screen" id="screen-habitos">
+  <div class="day-cards">
+    <div class="day-card"><div class="day-card-label">XP HOY</div><div class="day-card-val val-xp" id="day-xp2">+0</div></div>
+    <div class="day-card"><div class="day-card-label">BAROS HOY</div><div class="day-card-val val-baro" id="day-baro2">+0</div></div>
+    <div class="day-card"><div class="day-card-label">HP NETO</div><div class="day-card-val" id="day-hp2">+0</div></div>
+  </div>
+  <div class="habit-group pos">⚡ HABITOS POSITIVOS</div>
+  <div id="pos-habits"></div>
+  <div class="habit-group neg" style="margin-top:4px">☠ HABITOS NEGATIVOS</div>
+  <div id="neg-habits"></div>
+</div>
+
+<!-- TIENDA -->
+<div class="screen" id="screen-tienda">
+  <div class="info-card" style="margin-bottom:12px">
+    <strong>💰 Baros disponibles:</strong> <span id="shop-baro-total" style="color:var(--gold);font-family:var(--pixel);font-size:12px">0</span><br>
+    <span style="font-size:11px">Solo puedes comprar si tienes suficientes Baros. El efecto se aplica al instante.</span>
+  </div>
+  <div id="shop-list"></div>
+</div>
+
+<!-- INFO -->
+<div class="screen" id="screen-info">
+  <div class="section-label">COMO USAR</div>
+  <div class="info-card">
+    <strong>1. Marca tus habitos cada dia</strong><br>
+    Ve a la pestaña HABITOS y marca lo que hiciste. Los puntos se suman solos a tus stats.<br><br>
+    <strong>2. Acumula Baros</strong><br>
+    Con Baros puedes canjear recompensas en la Tienda. Solo puedes comprar si tienes suficiente.<br><br>
+    <strong>3. Reset automatico</strong><br>
+    Al abrir la app un nuevo dia, el checklist se resetea solo. Tu progreso acumulado se mantiene.<br><br>
+    <strong>4. Guardar en iPhone</strong><br>
+    Abre este archivo en Safari → toca el botón Compartir → "Añadir a pantalla de inicio". Funciona como app.
+  </div>
+
+  <div class="section-label">TABLA DE NIVELES</div>
+  <div class="stats-card">
+    <table class="titles-table" id="titles-table"></table>
+  </div>
+
+  <div class="section-label">ZONA PELIGROSA</div>
+  <div class="reset-area">
+    <div style="font-size:12px;color:var(--text2)">Resetea el checklist de hoy manualmente. Los stats acumulados NO se pierden.</div>
+    <button class="reset-btn" onclick="resetDay(true)">⚠ RESETEAR DIA DE HOY</button>
+  </div>
+  <div class="reset-area" style="border-color:#555">
+    <div style="font-size:12px;color:var(--text2)">Reinicia TODOS los stats al estado inicial. Accion irreversible.</div>
+    <button class="reset-btn" style="border-color:#555;color:#888" onclick="hardReset()">☠ REINICIO TOTAL DEL JUEGO</button>
+  </div>
+</div>
+
+<script>
+const TITLES = {1:'Iniciado',2:'Aventurero',3:'Guardian',4:'Heroe',5:'Elite',6:'Maestro',7:'Veterano',8:'Campeon',9:'Grandmaster',10:'Leyenda'};
+const TITLE_XP = [0,100,200,300,400,500,600,700,800,1000];
+const AVATARS = {1:'🐣',2:'⚔️',3:'🛡️',4:'🌟',5:'💎',6:'🔥',7:'🌙',8:'⚡',9:'✨',10:'👑'};
+
+const AREAS = [
+  {id:'salud',name:'Salud',icon:'💪'},
+  {id:'relaciones',name:'Relaciones',icon:'❤️'},
+  {id:'finanzas',name:'Finanzas',icon:'💼'},
+  {id:'negocio',name:'Negocio',icon:'🚀'},
+  {id:'aprendizaje',name:'Aprendizaje',icon:'📚'},
+  {id:'creatividad',name:'Creatividad',icon:'🎨'},
+];
+
+const HABITS = [
+  {id:'h1',name:'Hacer ejercicio',xp:20,hp:10,baro:5,area:'salud',neg:false},
+  {id:'h2',name:'Leer 30 minutos',xp:15,hp:0,baro:5,area:'aprendizaje',neg:false},
+  {id:'h3',name:'Aprender algo nuevo',xp:25,hp:0,baro:10,area:'aprendizaje',neg:false},
+  {id:'h4',name:'Crear contenido',xp:30,hp:0,baro:15,area:'creatividad',neg:false},
+  {id:'h5',name:'Avanzar en mi negocio',xp:50,hp:0,baro:50,area:'negocio',neg:false},
+  {id:'h6',name:'Conectar con alguien',xp:20,hp:5,baro:10,area:'relaciones',neg:false},
+  {id:'h7',name:'Revisar mis finanzas',xp:15,hp:0,baro:20,area:'finanzas',neg:false},
+  {id:'h8',name:'Dormir 8 horas',xp:10,hp:20,baro:0,area:'salud',neg:false},
+  {id:'h9',name:'Comer saludable',xp:10,hp:5,baro:0,area:'salud',neg:false},
+  {id:'h10',name:'Meditar / respirar',xp:10,hp:10,baro:0,area:'salud',neg:false},
+  {id:'n1',name:'Procrastinar',xp:-10,hp:-5,baro:-5,area:'negocio',neg:true},
+  {id:'n2',name:'Dormir menos de 6h',xp:0,hp:-20,baro:0,area:'salud',neg:true},
+  {id:'n3',name:'Gastar innecesario',xp:-5,hp:0,baro:-20,area:'finanzas',neg:true},
+  {id:'n4',name:'Redes sociales +2h',xp:-10,hp:-5,baro:0,area:'negocio',neg:true},
+  {id:'n5',name:'Comer chatarra',xp:0,hp:-5,baro:0,area:'salud',neg:true},
+];
+
+const SHOP = [
+  {id:'s1',name:'Day Pass Comida Chatarra',icon:'🍦',price:50,hp:0,area:'salud'},
+  {id:'s2',name:'Chelitas',icon:'🍺',price:130,hp:-30,area:'salud'},
+  {id:'s3',name:'Compra innecesaria',icon:'🛍️',price:80,hp:-10,area:'finanzas'},
+  {id:'s4',name:'Dia de series',icon:'🎥',price:150,hp:10,area:'salud'},
+  {id:'s5',name:'Casino night',icon:'🎰',price:300,hp:-50,area:'finanzas'},
+  {id:'s6',name:'Cena especial',icon:'🍕',price:300,hp:20,area:'relaciones'},
+  {id:'s7',name:'Comprar un curso',icon:'📱',price:500,hp:0,xpBonus:50,area:'aprendizaje'},
+  {id:'s8',name:'Salida o viaje corto',icon:'🌴',price:800,hp:30,area:'salud'},
+  {id:'s9',name:'Dia de descanso total',icon:'😴',price:100,hp:25,area:'salud'},
+];
+
+function defaultState() {
+  const areas = {};
+  AREAS.forEach(a => { areas[a.id] = {xp:0, hp:1000, baro:0}; });
+  return {areas, checked:{}, shopBought:{}, lastReset: new Date().toDateString(), prevLevel:1};
+}
+
+let S = defaultState();
+try {
+  const raw = localStorage.getItem('rpg_vida_v4');
+  if (raw) S = JSON.parse(raw);
+} catch(e) {}
+
+function save() {
+  try { localStorage.setItem('rpg_vida_v4', JSON.stringify(S)); } catch(e) {}
+}
+
+function globalXP() { return Object.values(S.areas).reduce((s,a) => s+a.xp, 0); }
+function globalBaro() { return Object.values(S.areas).reduce((s,a) => s+a.baro, 0); }
+function levelFor(xp) { return Math.max(1, Math.floor(xp/100)+1); }
+function globalLevel() { return levelFor(globalXP()); }
+function titleFor(lv) { return TITLES[Math.min(lv,10)] || 'Leyenda'; }
+
+function todayXP() { return HABITS.reduce((s,h) => S.checked[h.id] ? s+h.xp : s, 0); }
+function todayBaro() { return HABITS.reduce((s,h) => S.checked[h.id] ? s+h.baro : s, 0); }
+function todayHP() { return HABITS.reduce((s,h) => S.checked[h.id] ? s+h.hp : s, 0); }
+
+function checkAutoReset() {
+  const today = new Date().toDateString();
+  if (S.lastReset !== today) {
+    S.checked = {};
+    S.shopBought = {};
+    S.lastReset = today;
+    save();
+  }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._to);
+  t._to = setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+function flashLevel() {
+  const f = document.getElementById('lvFlash');
+  f.classList.add('show');
+  setTimeout(() => f.classList.remove('show'), 600);
+}
+
+function renderProfile() {
+  const lv = globalLevel();
+  const gxp = globalXP();
+  const lvXP = gxp % 100;
+  const pct = lvXP;
+  const anyDead = Object.values(S.areas).some(a => a.hp <= 0);
+  const av = AVATARS[Math.min(lv,10)];
+
+  document.getElementById('avatar').textContent = av;
+  document.getElementById('hdr-avatar').textContent = av;
+  document.getElementById('char-name').textContent = 'MI PERSONAJE';
+  document.getElementById('char-title').textContent = 'Nivel '+lv+' — '+titleFor(lv);
+  document.getElementById('hdr-level').textContent = 'NIV. '+lv+' — '+titleFor(lv).toUpperCase();
+  document.getElementById('hdr-baro').textContent = globalBaro();
+  document.getElementById('xp-label').textContent = lvXP+' / 100 XP ('+pct+'%)';
+  document.getElementById('xp-fill').style.width = pct+'%';
+  document.getElementById('died-banner').style.display = anyDead ? 'block' : 'none';
+  const st = document.getElementById('char-status');
+  if (anyDead) {
+    st.textContent = '☠ YOU DIED';
+    st.className = 'char-status status-dead';
+  } else {
+    st.textContent = '▶ Vivo y en pie';
+    st.className = 'char-status status-alive';
+  }
+
+  const txp = todayXP(), tbaro = todayBaro(), thp = todayHP();
+  ['day-xp','day-xp2'].forEach(id => {
+    const el = document.getElementById(id);
+    el.textContent = (txp >= 0 ? '+' : '') + txp;
+  });
+  ['day-baro','day-baro2'].forEach(id => {
+    document.getElementById(id).textContent = (tbaro >= 0 ? '+' : '') + tbaro;
+  });
+  ['day-hp','day-hp2'].forEach(id => {
+    const el = document.getElementById(id);
+    el.textContent = (thp >= 0 ? '+' : '') + thp;
+    el.className = 'day-card-val ' + (thp < 0 ? 'val-hp-neg' : 'val-hp-pos');
+  });
+}
+
+function renderStats() {
+  let html = '';
+  AREAS.forEach(a => {
+    const st = S.areas[a.id];
+    const lv = levelFor(st.xp);
+    const lvXP = st.xp % 100;
+    const hpPct = Math.max(0, Math.min(100, (st.hp/1000)*100));
+    const hpColor = st.hp > 600 ? 'var(--green)' : st.hp > 250 ? 'var(--gold)' : 'var(--red)';
+    let squares = '';
+    const sq = Math.floor(lvXP / 10);
+    for (let i = 0; i < 10; i++) squares += `<div class="sq${i<sq?' on':''}"></div>`;
+
+    html += `<div class="stat-row">
+      <div>
+        <div class="stat-top">
+          <span class="stat-icon">${a.icon}</span>
+          <span class="stat-name">${a.name}</span>
+          <span class="stat-lv">Nv.${lv}</span>
+        </div>
+        <div class="stat-nums">
+          <span>⚡ ${st.xp} XP</span>
+          <span style="display:flex;align-items:center;gap:4px">
+            ❤️ <div class="stat-hp-bar"><div class="stat-hp-fill" style="width:${hpPct}%;background:${hpColor}"></div></div> ${st.hp}
+          </span>
+          <span style="color:var(--gold)">💰 ${st.baro}</span>
+        </div>
+        <div class="prog-squares">${squares}</div>
+        <div style="font-size:10px;color:var(--text2);margin-top:3px">${lvXP}/100 XP para nivel ${lv+1}</div>
+      </div>
+    </div>`;
+  });
+  document.getElementById('stats-list').innerHTML = html;
+}
+
+function renderHabits() {
+  function makeHabit(h) {
+    const done = S.checked[h.id];
+    const row_cls = done ? (h.neg ? 'habit-item done-neg' : 'habit-item done-pos') : 'habit-item';
+    const cb_cls = done ? (h.neg ? 'cb on-neg' : 'cb on-pos') : 'cb';
+    let tags = '';
+    if (h.xp !== 0) tags += `<span class="tag ${h.xp>0?'tag-xp':'tag-xp-neg'}">${h.xp>0?'+':''}${h.xp} XP</span>`;
+    if (h.hp !== 0) tags += `<span class="tag ${h.hp>0?'tag-hp':'tag-hp-neg'}">${h.hp>0?'+':''}${h.hp} HP</span>`;
+    if (h.baro !== 0) tags += `<span class="tag tag-baro">${h.baro>0?'+':''}${h.baro} Baros</span>`;
+    const area = AREAS.find(a => a.id === h.area);
+    tags += `<span class="tag tag-area">${area?area.icon:''} ${area?area.name:''}</span>`;
+    return `<div class="${row_cls}" onclick="toggleHabit('${h.id}')">
+      <div class="${cb_cls}"><span class="cb-check">✓</span></div>
+      <div class="habit-body">
+        <div class="habit-name">${h.name}</div>
+        <div class="habit-tags">${tags}</div>
+      </div>
+    </div>`;
+  }
+  document.getElementById('pos-habits').innerHTML = HABITS.filter(h=>!h.neg).map(makeHabit).join('');
+  document.getElementById('neg-habits').innerHTML = HABITS.filter(h=>h.neg).map(makeHabit).join('');
+}
+
+function renderShop() {
+  const total = globalBaro();
+  document.getElementById('shop-baro-total').textContent = total;
+  let html = '';
+  SHOP.forEach(item => {
+    const bought = S.shopBought[item.id];
+    const canAfford = total >= item.price;
+    let meta = `<span class="shop-price">${item.price} Baros</span>`;
+    if (item.hp !== 0) meta += ` · <span class="${item.hp>0?'shop-effect-pos':'shop-effect-neg'}">${item.hp>0?'+':''}${item.hp} HP</span>`;
+    if (item.xpBonus) meta += ` · <span style="color:var(--purple-light)">+${item.xpBonus} XP</span>`;
+    let btnClass, btnText;
+    if (bought) { btnClass = 'buy-btn buy-btn-done'; btnText = '✓ CANJEADO'; }
+    else if (canAfford) { btnClass = 'buy-btn buy-btn-ready'; btnText = 'COMPRAR'; }
+    else { btnClass = 'buy-btn buy-btn-cant'; btnText = 'SIN BAROS'; }
+    html += `<div class="shop-item">
+      <div class="shop-emoji">${item.icon}</div>
+      <div class="shop-body">
+        <div class="shop-name">${item.name}</div>
+        <div class="shop-meta">${meta}</div>
+      </div>
+      <button class="${btnClass}" ${(bought||!canAfford)?'disabled':''} onclick="buyItem('${item.id}')">${btnText}</button>
+    </div>`;
+  });
+  document.getElementById('shop-list').innerHTML = html;
+}
+
+function renderTitles() {
+  const lv = globalLevel();
+  let html = '<tr><th>NIV</th><th>XP</th><th>TITULO</th></tr>';
+  Object.entries(TITLES).forEach(([l,t]) => {
+    const lvn = parseInt(l);
+    const xpReq = (lvn-1)*100;
+    const cls = lvn === lv ? 'current-lv' : '';
+    html += `<tr class="${cls}"><td>${lvn}${lvn===lv?' ◀':''}</td><td>${xpReq}+</td><td>${t}</td></tr>`;
+  });
+  document.getElementById('titles-table').innerHTML = html;
+}
+
+function toggleHabit(id) {
+  const h = HABITS.find(x => x.id === id);
+  if (!h) return;
+  const was = S.checked[id];
+  S.checked[id] = !was;
+  const mul = was ? -1 : 1;
+  const area = S.areas[h.area];
+  const prevLv = globalLevel();
+  area.xp = Math.max(0, area.xp + h.xp * mul);
+  area.hp = Math.max(0, Math.min(9999, area.hp + h.hp * mul));
+  area.baro = Math.max(0, area.baro + h.baro * mul);
+  save();
+  const newLv = globalLevel();
+  if (!was) {
+    let msg = '';
+    if (h.xp !== 0) msg += (h.xp>0?'+':'')+h.xp+' XP  ';
+    if (h.hp !== 0) msg += (h.hp>0?'+':'')+h.hp+' HP  ';
+    if (h.baro !== 0) msg += '+'+h.baro+' Baros';
+    if (msg) showToast(msg.trim());
+    if (newLv > prevLv) { flashLevel(); showToast('⭐ LEVEL UP! Nivel '+newLv+' — '+titleFor(newLv)); }
+  }
+  renderAll();
+}
+
+function buyItem(id) {
+  const item = SHOP.find(x => x.id === id);
+  if (!item || S.shopBought[id]) return;
+  const total = globalBaro();
+  if (total < item.price) { showToast('Sin suficientes Baros'); return; }
+  const area = S.areas[item.area];
+  area.baro = Math.max(0, area.baro - item.price);
+  if (item.hp !== 0) area.hp = Math.max(0, Math.min(9999, area.hp + item.hp));
+  if (item.xpBonus) area.xp += item.xpBonus;
+  S.shopBought[id] = true;
+  save();
+  showToast('Canjeado: ' + item.name);
+  renderAll();
+}
+
+function resetDay(manual) {
+  S.checked = {};
+  S.shopBought = {};
+  S.lastReset = new Date().toDateString();
+  save();
+  if (manual) showToast('Checklist reseteado — Nuevo dia!');
+  renderAll();
+}
+
+function hardReset() {
+  if (!confirm('Esto borra TODO tu progreso. ¿Estas seguro?')) return;
+  S = defaultState();
+  save();
+  showToast('Juego reiniciado');
+  renderAll();
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    const tabs = ['perfil','habitos','tienda','info'];
+    t.classList.toggle('active', tabs[i] === tab);
+  });
+  document.querySelectorAll('.screen').forEach(s => {
+    s.classList.toggle('active', s.id === 'screen-'+tab);
+  });
+}
+
+function renderAll() {
+  renderProfile();
+  renderStats();
+  renderHabits();
+  renderShop();
+  renderTitles();
+}
+
+checkAutoReset();
+renderAll();
+</script>
+</body>
+</html>
